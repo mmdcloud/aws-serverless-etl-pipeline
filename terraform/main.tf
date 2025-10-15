@@ -82,7 +82,7 @@ module "lambda_function_code" {
 }
 
 module "lambda_function_role" {
-  source             = "../../../modules/iam"
+  source             = "./modules/iam"
   role_name          = "lambda-function-role"
   role_description   = "IAM role for transformation lambda function"
   policy_name        = "lambda-function-role-policy"
@@ -121,17 +121,16 @@ module "lambda_function_role" {
 }
 
 module "lambda_function" {
-  source                  = "./modules/lambda"
-  function_name           = "serverless-transformation-function"
-  role_arn                = module.lambda_function_role.arn
-  permissions             = []
-  env_variables           = {}
-  handler                 = "lambda.lambda_handler"
-  runtime                 = "python3.12"
-  s3_bucket               = module.lambda_function_code.bucket
-  s3_key                  = "lambda.zip"
-  layers                  = [aws_lambda_layer_version.python_layer.arn]
-  code_signing_config_arn = module.carshub_signing_profile.config_arn
+  source        = "./modules/lambda"
+  function_name = "serverless-transformation-function"
+  role_arn      = module.lambda_function_role.arn
+  permissions   = []
+  env_variables = {}
+  handler       = "lambda.lambda_handler"
+  runtime       = "python3.12"
+  s3_bucket     = module.lambda_function_code.bucket
+  s3_key        = "lambda.zip"
+  layers        = []
 }
 
 # ----------------------------------------------------------------------
@@ -148,7 +147,7 @@ resource "aws_glue_catalog_table" "table" {
 }
 
 module "glue_crawler_role" {
-  source             = "../../../modules/iam"
+  source             = "./modules/iam"
   role_name          = "lambda-function-role"
   role_description   = "IAM role for transformation lambda function"
   policy_name        = "lambda-function-role-policy"
@@ -196,8 +195,8 @@ module "glue_crawler_role" {
                     "s3:ListBucket"
                   ]
                   Resource : [
-                    "${module.curated_results.arn}",
-                    "${module.curated_results.arn}/*"
+                    "${module.curated_bucket.arn}",
+                    "${module.curated_bucket.arn}/*"
                   ]
             },
             {
