@@ -126,7 +126,7 @@ module "lambda_function" {
   role_arn      = module.lambda_function_role.arn
   permissions   = []
   env_variables = {}
-  handler       = "lambda.lambda_handler"
+  handler       = "lambda_function.lambda_handler"
   runtime       = "python3.12"
   s3_bucket     = module.lambda_function_code.bucket
   s3_key        = "lambda.zip"
