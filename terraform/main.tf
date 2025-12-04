@@ -1,11 +1,14 @@
+resource "random_id" "id" {
+  byte_length = 8
+}
+
 # ----------------------------------------------------------------------
 # Raw Bucket
 # ----------------------------------------------------------------------
 module "raw_bucket" {
   source        = "./modules/s3"
-  bucket_name   = "raw-bucket"
+  bucket_name   = "raw-bucket-${random_id.id.hex}"
   objects       = []
-  bucket_policy = ""
   cors = [
     {
       allowed_headers = ["*"]
@@ -29,7 +32,7 @@ module "raw_bucket" {
 # ----------------------------------------------------------------------
 module "curated_bucket" {
   source        = "./modules/s3"
-  bucket_name   = "curated-bucket"
+  bucket_name   = "curated-bucket-${random_id.id.hex}"
   objects       = []
   bucket_policy = ""
   cors = [
@@ -55,7 +58,7 @@ module "curated_bucket" {
 # ----------------------------------------------------------------------
 module "lambda_function_code" {
   source      = "./modules/s3"
-  bucket_name = "lambda-function-code"
+  bucket_name = "lambda-function-code-${random_id.id.hex}"
   objects = [
     {
       key    = "lambda.zip"
@@ -83,9 +86,9 @@ module "lambda_function_code" {
 
 module "lambda_function_role" {
   source             = "./modules/iam"
-  role_name          = "lambda-function-role"
+  role_name          = "lambda-function-role-${random_id.id.hex}"
   role_description   = "IAM role for transformation lambda function"
-  policy_name        = "lambda-function-role-policy"
+  policy_name        = "lambda-function-role-policy-${random_id.id.hex}"
   policy_description = "IAM policy for transformation lambda function"
   assume_role_policy = <<EOF
     {
@@ -122,7 +125,7 @@ module "lambda_function_role" {
 
 module "lambda_function" {
   source        = "./modules/lambda"
-  function_name = "serverless-transformation-function"
+  function_name = "serverless-transformation-function-${random_id.id.hex}"
   role_arn      = module.lambda_function_role.arn
   permissions   = []
   env_variables = {}
@@ -148,10 +151,10 @@ resource "aws_glue_catalog_table" "table" {
 
 module "glue_crawler_role" {
   source             = "./modules/iam"
-  role_name          = "lambda-function-role"
-  role_description   = "IAM role for transformation lambda function"
-  policy_name        = "lambda-function-role-policy"
-  policy_description = "IAM policy for transformation lambda function"
+  role_name          = "glue-crawler-role-${random_id.id.hex}"
+  role_description   = "IAM role for Glue crawler"
+  policy_name        = "glue-crawler-role-policy-${random_id.id.hex}"
+  policy_description = "IAM policy for Glue crawler"
   assume_role_policy = <<EOF
     {
         "Version": "2012-10-17",
@@ -181,30 +184,30 @@ module "glue_crawler_role" {
                 "Effect": "Allow"
             },
             {
-                  Effect   : "Allow"
-                  Action   : [
+                  "Effect"   : "Allow",
+                  "Action"   : [
                     "glue:*"
-                  ]
-                  Resource : "*"
+                  ],
+                  "Resource" : "*"
             },
             {
-                  Effect   : "Allow"
-                  Action   : [
+                  "Effect"   : "Allow",
+                  "Action"   : [
                     "s3:GetObject",
                     "s3:PutObject",
                     "s3:ListBucket"
-                  ]
-                  Resource : [
+                  ],
+                  "Resource" : [
                     "${module.curated_bucket.arn}",
                     "${module.curated_bucket.arn}/*"
                   ]
             },
             {
-                  Effect   : "Allow"
-                  Action   : [
+                  "Effect"   : "Allow",
+                  "Action"   : [
                     "s3:PutObject"
-                  ]
-                  Resource : "${module.athena_results.arn}"
+                  ],
+                  "Resource" : "${module.athena_results.arn}"
             }
         ]
     }
@@ -226,7 +229,7 @@ resource "aws_glue_crawler" "crawler" {
 # ----------------------------------------------------------------------
 module "athena_results" {
   source        = "./modules/s3"
-  bucket_name   = "athena-results"
+  bucket_name   = "athena-results-${random_id.id.hex}"
   objects       = []
   bucket_policy = ""
   cors = [
