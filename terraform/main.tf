@@ -9,6 +9,15 @@ module "raw_bucket" {
   source      = "./modules/s3"
   bucket_name = "raw-bucket-${random_id.id.hex}"
   objects     = []
+  bucket_notification = {
+    queue = []
+    lambda_function = [
+      {
+        lambda_function_arn = module.lambda_function.arn
+        events              = ["s3:ObjectCreated:*"]
+      }
+    ]
+  }
   cors = [
     {
       allowed_headers = ["*"]
@@ -127,15 +136,22 @@ module "lambda_function" {
   source        = "./modules/lambda"
   function_name = "serverless-transformation-function-${random_id.id.hex}"
   role_arn      = module.lambda_function_role.arn
-  permissions   = []
+  permissions = [
+    {
+      action       = "lambda:InvokeFunction"
+      principal    = "s3.amazonaws.com"
+      source_arn   = "${module.raw_bucket.arn}"
+      statement_id = "AllowS3Invoke"
+    }
+  ]
   env_variables = {
     CURATED_BUCKET_NAME = "${module.curated_bucket.bucket}"
   }
-  handler       = "lambda_function.lambda_handler"
-  runtime       = "python3.12"
-  s3_bucket     = module.lambda_function_code.bucket
-  s3_key        = "lambda.zip"
-  layers        = []
+  handler   = "lambda_function.lambda_handler"
+  runtime   = "python3.12"
+  s3_bucket = module.lambda_function_code.bucket
+  s3_key    = "lambda.zip"
+  layers    = []
 }
 
 # ----------------------------------------------------------------------
