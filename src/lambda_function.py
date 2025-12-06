@@ -1,6 +1,7 @@
 
 import json
 import boto3
+import os
 import pandas as pd
 import io
 from datetime import datetime
@@ -31,7 +32,9 @@ def lambda_handler(event, context):
     # TODO implement
     bucket_name = event['Records'][0]['s3']['bucket']['name']
     key=event['Records'][0]['s3']['object']['key']
-
+    
+    curated_bucket_name = os.environ["CURATED_BUCKET_NAME"]
+    
     s3 = boto3.client('s3')
     response = s3.get_object(Bucket=bucket_name, Key=key)
 
@@ -49,9 +52,8 @@ def lambda_handler(event, context):
 
     key_staging=f'orders_parquet_datalake/orders_ETL_{timestamp}.parquet'
     
+    s3.put_object(Bucket=curated_bucket_name, Key=key_staging, Body=parquet_buffer.getvalue())
 
-    s3.put_object(Bucket=bucket_name, Key=key_staging, Body=parquet_buffer.getvalue())
-
-    crawler_name = 'etl_pipeline_crawler'
+    crawler_name = 'etl-crawler'
     glue = boto3.client('glue')
     response = glue.start_crawler(Name=crawler_name)

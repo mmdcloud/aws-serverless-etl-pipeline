@@ -6,9 +6,9 @@ resource "random_id" "id" {
 # Raw Bucket
 # ----------------------------------------------------------------------
 module "raw_bucket" {
-  source        = "./modules/s3"
-  bucket_name   = "raw-bucket-${random_id.id.hex}"
-  objects       = []
+  source      = "./modules/s3"
+  bucket_name = "raw-bucket-${random_id.id.hex}"
+  objects     = []
   cors = [
     {
       allowed_headers = ["*"]
@@ -128,7 +128,9 @@ module "lambda_function" {
   function_name = "serverless-transformation-function-${random_id.id.hex}"
   role_arn      = module.lambda_function_role.arn
   permissions   = []
-  env_variables = {}
+  env_variables = {
+    CURATED_BUCKET_NAME = "${module.curated_bucket.bucket}"
+  }
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.12"
   s3_bucket     = module.lambda_function_code.bucket
@@ -262,8 +264,8 @@ resource "aws_athena_workgroup" "etl" {
   state = "ENABLED"
 }
 
-resource "aws_athena_named_query" "query" {
-  name        = "sample_query"
+resource "aws_athena_named_query" "etl_query" {
+  name        = "etl_query"
   database    = aws_glue_catalog_database.database.name
   description = "Query sample table"
   query       = "SELECT * FROM ${aws_glue_catalog_table.table.name} LIMIT 10;"
