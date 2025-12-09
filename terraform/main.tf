@@ -8,16 +8,7 @@ resource "random_id" "id" {
 module "raw_bucket" {
   source      = "./modules/s3"
   bucket_name = "raw-bucket-${random_id.id.hex}"
-  objects     = []
-  bucket_notification = {
-    queue = []
-    lambda_function = [
-      {
-        lambda_function_arn = module.lambda_function.arn
-        events              = ["s3:ObjectCreated:*"]
-      }
-    ]
-  }
+  objects     = []  
   cors = [
     {
       allowed_headers = ["*"]
@@ -141,7 +132,7 @@ module "lambda_function" {
       action       = "lambda:InvokeFunction"
       principal    = "s3.amazonaws.com"
       source_arn   = "${module.raw_bucket.arn}"
-      statement_id = "AllowS3Invoke"
+      statement_id = "AllowExecutionFromS3"
     }
   ]
   env_variables = {
@@ -152,6 +143,15 @@ module "lambda_function" {
   s3_bucket = module.lambda_function_code.bucket
   s3_key    = "lambda.zip"
   layers    = []
+}
+
+resource "aws_s3_bucket_notification" "raw_bucket_lambda" {
+  bucket = module.raw_bucket.bucket
+  lambda_function {
+    lambda_function_arn = module.lambda_function.arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+  depends_on = [module.lambda_function]
 }
 
 # ----------------------------------------------------------------------
