@@ -8,7 +8,7 @@ resource "random_id" "id" {
 module "raw_bucket" {
   source      = "./modules/s3"
   bucket_name = "raw-bucket-${random_id.id.hex}"
-  objects     = []  
+  objects     = []
   cors = [
     {
       allowed_headers = ["*"]
@@ -117,10 +117,24 @@ module "lambda_function_role" {
                 ],
                 "Resource": "arn:aws:logs:*:*:*",
                 "Effect": "Allow"
+            },
+            {
+                "Action": [
+                  "s3:GetObject"
+                ],
+                "Resource": "${module.raw_bucket.arn}/*",
+                "Effect": "Allow"
             }
         ]
     }
     EOF
+}
+
+# Lambda Layer for storing dependencies
+resource "aws_lambda_layer_version" "python_layer" {
+  filename            = "./files/python.zip"
+  layer_name          = "python"
+  compatible_runtimes = ["python3.12"]
 }
 
 module "lambda_function" {
@@ -142,7 +156,7 @@ module "lambda_function" {
   runtime   = "python3.12"
   s3_bucket = module.lambda_function_code.bucket
   s3_key    = "lambda.zip"
-  layers    = []
+  layers    = [aws_lambda_layer_version.python_layer.arn]
 }
 
 resource "aws_s3_bucket_notification" "raw_bucket_lambda" {
@@ -236,9 +250,8 @@ resource "aws_glue_crawler" "crawler" {
   database_name = aws_glue_catalog_database.database.name
   name          = var.glue_crawler_name
   role          = module.glue_crawler_role.arn
-
   s3_target {
-    path = "s3://${module.curated_bucket.bucket}"
+    path = "s3://${module.raw_bucket.bucket}"
   }
 }
 
